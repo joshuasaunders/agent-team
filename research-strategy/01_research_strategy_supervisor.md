@@ -63,7 +63,8 @@ Received from the top-level supervisor:
 ---
 
 ## Outputs
-Delivered to the top-level supervisor:
+Written to `./runs/YYYY-MM-DD_task-name/` (create this directory at the start of each run,
+using today's date and a short slug describing the task):
 
 - `department_report.md` — The full consolidated research and strategy package, including
   all specialist outputs organized into a coherent narrative
