@@ -1,0 +1,22 @@
+# Run outputs — these are artifacts, not source files
+research-strategy/outputs/
+runs/
+
+# Python environments
+crewai/venv/
+langgraph/venv/
+__pycache__/
+*.pyc
+.env
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Keep the output directory structure but not the contents
+!research-strategy/outputs/.gitkeep
+!research-strategy/outputs/competitors/.gitkeep
+!research-strategy/outputs/analysis/.gitkeep
+!research-strategy/outputs/gtm/.gitkeep
+!research-strategy/outputs/innovation/.gitkeep
+!research-strategy/outputs/synthesis/.gitkeep
