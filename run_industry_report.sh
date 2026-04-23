@@ -249,6 +249,18 @@ EOF
 sep() { echo "=========================================="; }
 hdr() { echo ""; sep; echo " $1"; sep; }
 
+# Print a live countdown: "  Pausing 60s... 59 58 57..." then newline
+countdown() {
+  local secs="$1" msg="${2:-Pausing}"
+  printf "  %s %ss... " "$msg" "$secs"
+  while [[ "$secs" -gt 0 ]]; do
+    printf "%s " "$secs"
+    sleep 1
+    secs=$(( secs - 1 ))
+  done
+  echo "done."
+}
+
 log_result() {
   local stage="$1" name="$2" status="$3" t_start="$4" t_end="$5"
   cat >> "$RUN_LOG" <<EOF
@@ -342,8 +354,7 @@ halt_if_failed() {
     exit 1
   fi
   echo ""
-  echo "  Pausing ${INTER_STAGE_SLEEP}s before next stage to avoid rate limits..."
-  sleep "$INTER_STAGE_SLEEP"
+  countdown "$INTER_STAGE_SLEEP" "Clearing rate limit window"
 }
 
 halt_if_failed_no_sleep() {
@@ -496,8 +507,7 @@ Do not add commentary or explanations — the file must contain only company nam
   fi
 
   echo ""
-  echo "  Pausing ${INTER_STAGE_SLEEP}s before Stage 2..."
-  sleep "$INTER_STAGE_SLEEP"
+  countdown "$INTER_STAGE_SLEEP" "Clearing rate limit window before Stage 2"
 fi
 
 
@@ -618,13 +628,27 @@ Follow your standard workflow exactly as specified in your agent instructions." 
 
     # Stagger launches to avoid token burst at the start of Stage 2
     if [[ "$COMP_IDX" -lt "$COMP_TOTAL" ]]; then
-      echo "  Waiting ${STAGE2_LAUNCH_STAGGER}s before next launch..."
-      sleep "$STAGE2_LAUNCH_STAGGER"
+      countdown "$STAGE2_LAUNCH_STAGGER" "Next launch in"
     fi
   done
 
   echo ""
-  echo "  Waiting for all $COMP_TOTAL jobs to finish..."
+  echo "  All $COMP_TOTAL jobs launched. Waiting for results..."
+  echo "  (Logs: $RUN_DIR/stage2_<competitor>.log)"
+
+  # ── Pulse while jobs run ───────────────────────────────────────────────────
+  # Print a dot every 30s so the terminal doesn't look frozen.
+  PULSE_PIDS=()
+  for COMP_SLUG in "${!COMP_PIDS[@]}"; do
+    (
+      while kill -0 "${COMP_PIDS[$COMP_SLUG]}" 2>/dev/null; do
+        sleep 30
+        kill -0 "${COMP_PIDS[$COMP_SLUG]}" 2>/dev/null && \
+          echo "  [still running] ${COMP_NAMES[$COMP_SLUG]}..."
+      done
+    ) &
+    PULSE_PIDS+=($!)
+  done
 
   # ── Wait and collect results ───────────────────────────────────────────────
   STAGE2_ANY_FAILED=0
@@ -653,6 +677,11 @@ Follow your standard workflow exactly as specified in your agent instructions." 
     fi
   done
 
+  # Kill any still-running pulse watchers
+  for pid in "${PULSE_PIDS[@]}"; do
+    kill "$pid" 2>/dev/null || true
+  done
+
   echo ""
   if [[ "$STAGE2_ANY_FAILED" -eq 1 ]]; then
     echo "  Warning: one or more competitor profiles were not written. Check logs above."
@@ -668,8 +697,7 @@ Follow your standard workflow exactly as specified in your agent instructions." 
   fi  # end: competitors found
 
   echo ""
-  echo "  Pausing ${POST_STAGE2_SLEEP}s after parallel Stage 2 to clear rate limit window..."
-  sleep "$POST_STAGE2_SLEEP"
+  countdown "$POST_STAGE2_SLEEP" "Clearing rate limit window"
 
 fi    # end: stage not skipped
 
