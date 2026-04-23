@@ -154,12 +154,16 @@ AGENT_07="$RS_DIR/07_consultant.md"
 
 if [[ "$DEPTH" == "quick" ]]; then
   MAX_TURNS=15
-  STAGE1_TURNS=25
-  CONSULTANT_TURNS=20
+  STAGE1_TURNS=20
+  STAGE3_TURNS=20
+  STAGE5_TURNS=18
+  CONSULTANT_TURNS=17
 else
   MAX_TURNS=20
-  STAGE1_TURNS=35
-  CONSULTANT_TURNS=30
+  STAGE1_TURNS=28
+  STAGE3_TURNS=30
+  STAGE5_TURNS=25
+  CONSULTANT_TURNS=25
 fi
 
 INTER_STAGE_SLEEP=60      # seconds to pause between stages — matches the 1-minute rate limit window
@@ -233,7 +237,7 @@ cat > "$RUN_LOG" <<EOF
 **Started:** $RUN_START
 **Company:** $COMPANY
 **Model:** $MODEL
-**Depth:** $DEPTH  (max turns: $MAX_TURNS, consultant: $CONSULTANT_TURNS)
+**Depth:** $DEPTH  (S1: $STAGE1_TURNS, S2/4: $MAX_TURNS, S3: $STAGE3_TURNS, S5: $STAGE5_TURNS, S6: $CONSULTANT_TURNS turns)
 **Max competitors:** $MAX_COMPETITORS
 **Seed competitors:** ${COMPETITORS:-none}
 **Focus:** ${FOCUS:-none}
@@ -370,7 +374,7 @@ hdr "Research & Strategy — Full Pipeline Run"
 echo " Industry:         $INDUSTRY"
 echo " Company:          $COMPANY"
 echo " Model:            $MODEL"
-echo " Depth:            $DEPTH  (Stage 1: ${STAGE1_TURNS}, agents: ${MAX_TURNS}, Consultant: ${CONSULTANT_TURNS} turns)"
+echo " Depth:            $DEPTH  (S1: ${STAGE1_TURNS}, S2/4: ${MAX_TURNS}, S3: ${STAGE3_TURNS}, S5: ${STAGE5_TURNS}, S6: ${CONSULTANT_TURNS} turns)"
 echo " Max competitors:  $MAX_COMPETITORS"
 echo " Seed competitors: ${COMPETITORS:-none}"
 if [[ -n "$FOCUS" ]]; then
@@ -720,23 +724,21 @@ Your input files are in:
 
 Read all available files in both directories before beginning your analysis.
 
-TURN BUDGET: You have approximately ${MAX_TURNS} turns. Manage them as follows:
+TURN BUDGET: You have approximately ${STAGE3_TURNS} turns. Manage them as follows:
 - Turn 1: Write skeleton output files immediately — section headers and one-line placeholders only.
-- Turns 2 through $((MAX_TURNS - 3)): Read inputs and fill in each section with real analysis.
-- Final 3 turns: Save your finalized output files. A thinner but complete analysis is better
-  than a detailed but incomplete one. Do not start new reading in your final 3 turns.
-  You can write multiple files in a single turn by making multiple Write tool calls in one
-  response — do this to use your writing turns efficiently. You have several files to write
-  (including one SWOT file per competitor) so batching is important here.
+- Turns 2 through $((STAGE3_TURNS - 3)): Read inputs and fill in each section with real analysis.
+- Final 3 turns: Save your finalized output files. Do not start new reading in your final 3 turns.
+  You can write multiple files in a single turn by making multiple Write tool calls — do this
+  to use your writing turns efficiently. You have several files to write, so batching is important.
 
-Write your outputs to:
-- ${OUT_DIR}/analysis/competitive_analysis_report.md
-- ${OUT_DIR}/analysis/key_insights.md
-- ${OUT_DIR}/analysis/positioning_map_data.csv
-- ${OUT_DIR}/analysis/swot_[company_name].md  (one file per competitor profiled)
+OUTPUT PRIORITY — complete these in order; if turns run short, finish earlier files before starting later ones:
+1. ${OUT_DIR}/analysis/competitive_analysis_report.md  ← HIGHEST PRIORITY, complete this first
+2. ${OUT_DIR}/analysis/swot_[company_name].md          ← one file per competitor (batch these in one turn)
+3. ${OUT_DIR}/analysis/positioning_map_data.csv
+4. ${OUT_DIR}/analysis/key_insights.md                 ← complete last
 
 Follow your standard workflow exactly as specified in your agent instructions." \
-"$MAX_TURNS" \
+"$STAGE3_TURNS" \
 "${OUT_DIR}/analysis/competitive_analysis_report.md"
 
 halt_if_failed
@@ -801,11 +803,13 @@ Your input files are in:
 
 Read all available files in those directories. Pay special attention to key_insights.md.
 
-TURN BUDGET: You have approximately ${MAX_TURNS} turns. Manage them as follows:
+TURN BUDGET: You have approximately ${STAGE5_TURNS} turns. Manage them as follows:
 - Turn 1: Write skeleton output files immediately — section headers and one-line placeholders only.
-- Turns 2 through $((MAX_TURNS - 2)): Read inputs and fill in each section with real analysis.
-- Final 2 turns: Save your finalized output files. A thinner but complete report is better than a detailed but incomplete one. Do not start new reading in your final 2 turns.
-  You can write multiple files in a single turn by making multiple Write tool calls in one response — do this to use your writing turns efficiently.
+- Turns 2 through $((STAGE5_TURNS - 3)): Read inputs and fill in each section with real analysis.
+- Final 3 turns: Save your finalized output files. A thinner but complete report is better than
+  a detailed but incomplete one. Do not start new reading in your final 3 turns.
+  You can write multiple files in a single turn by making multiple Write tool calls in one response
+  — do this to use your writing turns efficiently.
 
 Write your outputs to:
 - ${OUT_DIR}/innovation/innovation_opportunities.md
@@ -813,7 +817,7 @@ Write your outputs to:
 - ${OUT_DIR}/innovation/opportunity_priority_matrix.md
 
 Follow your standard workflow exactly as specified in your agent instructions." \
-"$MAX_TURNS" \
+"$STAGE5_TURNS" \
 "${OUT_DIR}/innovation/innovation_opportunities.md"
 
 halt_if_failed
