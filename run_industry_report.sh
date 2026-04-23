@@ -418,10 +418,8 @@ Selection criteria — include ONLY companies where:
 3. They are meaningfully sized within the focused market segment
 
 Explicitly EXCLUDE:
-- Large generalist companies (e.g. national insurers, big banks, major retailers)
-  that offer ${INDUSTRY} products as a minor or incidental part of a much larger business
+- Large generalist companies or conglomerates that offer ${INDUSTRY} products as a minor or incidental part of a much larger business
 - Companies where ${INDUSTRY} represents a small fraction of their overall revenue
-- Conglomerates that happen to have a ${INDUSTRY} division
 
 The goal is a list of the most significant focused, specialist competitors —
 the companies that a dedicated ${INDUSTRY} business would consider its direct peers.
@@ -438,17 +436,41 @@ Do not include the commissioning company (${COMPANY}) in the list.
 Do not add commentary or explanations — the file must contain only company names." \
       --model "$MODEL" \
       --allowedTools "Read,Write" \
-      --max-turns 3 \
+      --max-turns 5 \
       --dangerously-skip-permissions; then
 
       t_end_ext="$(date '+%Y-%m-%d %H:%M:%S')"
       log_result "1.5" "Competitor Extraction" "SUCCESS" "$t_start_ext" "$t_end_ext"
-      COMP_COUNT="$(wc -l < "$COMPETITORS_FILE" | tr -d ' ')"
-      echo "  Extracted $COMP_COUNT competitors → $COMPETITORS_FILE"
     else
       t_end_ext="$(date '+%Y-%m-%d %H:%M:%S')"
-      log_result "1.5" "Competitor Extraction" "FAILED" "$t_start_ext" "$t_end_ext"
-      echo "  Warning: extraction failed — Stage 2 will use --competitors seeds only."
+      log_result "1.5" "Competitor Extraction" "PARTIAL/FAILED" "$t_start_ext" "$t_end_ext"
+      echo "  Warning: extraction hit turn limit — cleaning whatever was written."
+    fi
+
+    # ── Clean key_competitors.txt regardless of exit code ─────────────────────
+    # Removes lines that are clearly not plain company names:
+    # numbered items, lines with parentheses/colons/commas, headers, long lines.
+    if [[ -f "$COMPETITORS_FILE" ]]; then
+      CLEANED="$(
+        grep -v '^\s*$' "$COMPETITORS_FILE" |        # drop empty lines
+        grep -v '^\s*[0-9]' |                        # drop numbered items (1. 2.)
+        grep -v '[():]' |                            # drop lines with parens or colons
+        grep -v ',' |                                # drop lines with commas
+        awk 'NF >= 1 && NF <= 5' |                   # keep only 1–5 word lines
+        awk '{ gsub(/^[[:space:]]+|[[:space:]]+$/, ""); print }' |  # trim whitespace
+        head -10
+      )"
+      if [[ -n "$CLEANED" ]]; then
+        echo "$CLEANED" > "$COMPETITORS_FILE"
+        COMP_COUNT="$(echo "$CLEANED" | wc -l | tr -d ' ')"
+        echo "  Extracted $COMP_COUNT competitors → $COMPETITORS_FILE"
+        echo "$CLEANED" | sed 's/^/    /'
+      else
+        echo "  Warning: no clean company names found — Stage 2 will use --competitors seeds only."
+        rm -f "$COMPETITORS_FILE"
+      fi
+    else
+      echo "  Warning: key_competitors.txt not written — Stage 2 will use --competitors seeds only."
     fi
   fi
 
