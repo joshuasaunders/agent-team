@@ -409,16 +409,30 @@ if [[ "$START_FROM" -le 1 ]]; then
     t_start_ext="$(date '+%Y-%m-%d %H:%M:%S')"
 
     if claude -p \
-"Read the market research report at ${MARKET_REPORT} and extract all companies
-mentioned as major market players, key competitors, or significant vendors in the
-${INDUSTRY} industry.
+"Read the market research report at ${MARKET_REPORT} and identify the most
+relevant competitors in the ${INDUSTRY} industry.
 
-Write the 6–10 most significant company names to ${COMPETITORS_FILE}.
+Selection criteria — include ONLY companies where:
+1. ${INDUSTRY} is their PRIMARY line of business (or one of very few core lines)
+2. The majority of their revenue comes from this industry
+3. They are meaningfully sized within the focused market segment
+
+Explicitly EXCLUDE:
+- Large generalist companies (e.g. national insurers, big banks, major retailers)
+  that offer ${INDUSTRY} products as a minor or incidental part of a much larger business
+- Companies where ${INDUSTRY} represents a small fraction of their overall revenue
+- Conglomerates that happen to have a ${INDUSTRY} division
+
+The goal is a list of the most significant focused, specialist competitors —
+the companies that a dedicated ${INDUSTRY} business would consider its direct peers.
+Rank them by size/market share within the focused segment, largest first.
+
+Write the top 6–10 names to ${COMPETITORS_FILE}.
 Format: one company name per line, no bullets, no numbers, no punctuation — plain names only.
 Example:
-  Toast
-  Square
-  SpotOn
+  BriteCo
+  Jewelers Mutual
+  Lavalier
 
 Do not include the commissioning company (${COMPANY}) in the list.
 Do not add commentary or explanations — the file must contain only company names." \
