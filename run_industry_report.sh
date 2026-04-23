@@ -154,9 +154,11 @@ AGENT_07="$RS_DIR/07_consultant.md"
 
 if [[ "$DEPTH" == "quick" ]]; then
   MAX_TURNS=15
+  STAGE1_TURNS=25
   CONSULTANT_TURNS=20
 else
   MAX_TURNS=20
+  STAGE1_TURNS=35
   CONSULTANT_TURNS=30
 fi
 
@@ -328,7 +330,7 @@ hdr "Research & Strategy — Full Pipeline Run"
 echo " Industry:         $INDUSTRY"
 echo " Company:          $COMPANY"
 echo " Model:            $MODEL"
-echo " Depth:            $DEPTH  (${MAX_TURNS} turns/agent, ${CONSULTANT_TURNS} for Consultant)"
+echo " Depth:            $DEPTH  (Stage 1: ${STAGE1_TURNS}, agents: ${MAX_TURNS}, Consultant: ${CONSULTANT_TURNS} turns)"
 echo " Max competitors:  $MAX_COMPETITORS"
 echo " Seed competitors: ${COMPETITORS:-none}"
 if [[ -n "$FOCUS" ]]; then
@@ -353,16 +355,20 @@ Company context: ${CONTEXT}
 Research depth: ${DEPTH}
 ${FOCUS_LINE}
 
-TURN BUDGET: You have approximately ${MAX_TURNS} turns. Manage them as follows:
-- Turn 1: Write skeleton output files immediately — section headers and one-line placeholders only. This ensures something useful exists even if turns run out.
-- Turns 2 through $((MAX_TURNS - 2)): Research and fill in each section with real content.
-- Final 2 turns: Save your finalized output files. A thinner but complete report is better than a detailed but incomplete one. Do not start new research in your final 2 turns.
+TURN BUDGET: You have approximately ${STAGE1_TURNS} turns. Manage them as follows:
+- Turn 1: Write skeleton output files immediately (market_research_report.md,
+  market_data_table.csv, research_confidence_notes.md) with section headers and
+  one-line placeholders. Do NOT write key_competitors.txt yet — it must contain
+  real names, not placeholders.
+- Turns 2 through $((STAGE1_TURNS - 2)): Research and fill in each section with real content.
+- Final 2 turns: First write key_competitors.txt with the real competitor names
+  you identified during research, then save your finalized report files.
 
 Write your outputs to:
 - ${OUT_DIR}/industry/market_research_report.md
 - ${OUT_DIR}/industry/market_data_table.csv
 - ${OUT_DIR}/industry/research_confidence_notes.md
-- ${OUT_DIR}/industry/key_competitors.txt
+- ${OUT_DIR}/industry/key_competitors.txt  (write this LAST — real names only)
 
 key_competitors.txt must contain the 6–10 most significant competitors in this
 market, one company name per line, no bullets or punctuation — plain names only.
@@ -373,7 +379,7 @@ Example format:
 These will be used to automatically populate the competitor research stage.
 
 Follow your standard workflow exactly as specified in your agent instructions." \
-"$MAX_TURNS" \
+"$STAGE1_TURNS" \
 "${OUT_DIR}/industry/market_research_report.md"
 
 halt_if_failed
