@@ -5,7 +5,10 @@
       "Bash(git commit -m ' *)",
       "Bash(git remote *)",
       "Bash(git branch *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(chmod +x /c/Development/agent-team/run_industry_report.sh)",
+      "Bash(bash -n /c/Development/agent-team/run_industry_report.sh)",
+      "Bash(bash /c/Development/agent-team/run_industry_report.sh --help)"
     ]
   }
 }
