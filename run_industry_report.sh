@@ -192,7 +192,26 @@ for f in "$AGENT_02" "$AGENT_03" "$AGENT_04" "$AGENT_05" "$AGENT_06" "$AGENT_07"
   fi
 done
 
-# ── Create output and run directories ────────────────────────────────────────
+# ── Archive any existing outputs, then wipe for a clean run ──────────────────
+# Skipped when resuming mid-pipeline (--start-from > 1) since existing outputs
+# are intentional inputs for the remaining stages.
+if [[ "$START_FROM" -eq 1 ]]; then
+  ARCHIVE_DIR="$SCRIPT_DIR/runs/${RUN_DATE}_${INDUSTRY_SLUG}_pre-run-archive"
+
+  # Only archive if there are existing files to save
+  EXISTING_FILES="$(find "$OUT_DIR" -type f 2>/dev/null | wc -l | tr -d ' ')"
+  if [[ "$EXISTING_FILES" -gt 0 ]]; then
+    echo ""
+    echo "Archiving $EXISTING_FILES existing output files before wiping..."
+    mkdir -p "$ARCHIVE_DIR"
+    cp -r "$OUT_DIR"/. "$ARCHIVE_DIR/"
+    echo "  Archived to: $ARCHIVE_DIR"
+  fi
+
+  # Wipe and recreate output directories
+  rm -rf "$OUT_DIR"
+fi
+
 mkdir -p \
   "$OUT_DIR/industry" \
   "$OUT_DIR/competitors" \
