@@ -15,8 +15,9 @@
 #                       Default: "Not provided"
 #   -x, --context       Description of the company's business, products, and goals
 #                       Default: "Not provided"
-#   -r, --competitors   Comma-separated list of competitors to profile
-#                       Example: "Toast,Square,SpotOn,Lightspeed"
+#   -r, --competitors   Seed competitors to always include (comma-separated, optional)
+#                       Stage 1 will discover additional key competitors automatically.
+#                       Example: "Toast,Square" — these plus discovered ones are all profiled
 #   -d, --depth         Research depth: "quick" or "deep" (default: deep)
 #                         quick = top-line outputs, fewer turns per agent
 #                         deep  = full standard outputs, more turns per agent
@@ -306,6 +307,15 @@ Write your outputs to:
 - ${OUT_DIR}/industry/market_research_report.md
 - ${OUT_DIR}/industry/market_data_table.csv
 - ${OUT_DIR}/industry/research_confidence_notes.md
+- ${OUT_DIR}/industry/key_competitors.txt
+
+key_competitors.txt must contain the 6–10 most significant competitors in this
+market, one company name per line, no bullets or punctuation — plain names only.
+Example format:
+  Toast
+  Square
+  SpotOn
+These will be used to automatically populate the competitor research stage.
 
 Follow your standard workflow exactly as specified in your agent instructions."
 
@@ -322,13 +332,49 @@ if [[ "$START_FROM" -gt 2 ]]; then
   echo "  [skip] Stage 2 — Competitor Researcher"
   log_result 2 "Competitor Researcher" "SKIPPED (start-from $START_FROM)" "—" "—"
 
-elif [[ -z "$COMPETITORS" ]]; then
-  echo ""
-  echo "  [skip] Stage 2 — Competitor Researcher (no --competitors provided)"
-  log_result 2 "Competitor Researcher" "SKIPPED (no competitors provided)" "—" "—"
-
 else
-  IFS=',' read -ra COMPETITOR_LIST <<< "$COMPETITORS"
+  # ── Build merged competitor list: Stage 1 discoveries + --competitors seeds ─
+  declare -A SEEN_COMPS
+  COMPETITOR_LIST=()
+
+  # Add seed competitors from --competitors flag first
+  if [[ -n "$COMPETITORS" ]]; then
+    IFS=',' read -ra SEED_LIST <<< "$COMPETITORS"
+    for SEED_RAW in "${SEED_LIST[@]}"; do
+      SEED="$(echo "$SEED_RAW" | tr -d '[:space:]')"
+      SEED_KEY="$(echo "$SEED" | tr '[:upper:]' '[:lower:]' | tr -cd '[:alnum:]')"
+      if [[ -n "$SEED" && -z "${SEEN_COMPS[$SEED_KEY]:-}" ]]; then
+        COMPETITOR_LIST+=("$SEED")
+        SEEN_COMPS["$SEED_KEY"]=1
+      fi
+    done
+  fi
+
+  # Merge in competitors discovered by the Industry Researcher
+  DISCOVERED_FILE="${OUT_DIR}/industry/key_competitors.txt"
+  if [[ -f "$DISCOVERED_FILE" ]]; then
+    while IFS= read -r LINE || [[ -n "$LINE" ]]; do
+      DISC="$(echo "$LINE" | tr -d '[:space:]' | sed 's/^[-*•]*//')"
+      DISC_KEY="$(echo "$DISC" | tr '[:upper:]' '[:lower:]' | tr -cd '[:alnum:]')"
+      if [[ -n "$DISC" && -z "${SEEN_COMPS[$DISC_KEY]:-}" ]]; then
+        COMPETITOR_LIST+=("$DISC")
+        SEEN_COMPS["$DISC_KEY"]=1
+      fi
+    done < "$DISCOVERED_FILE"
+    echo "  Discovered competitors: $(wc -l < "$DISCOVERED_FILE" | tr -d ' ') from Stage 1"
+  else
+    echo "  Note: key_competitors.txt not found — using --competitors list only"
+  fi
+
+  unset SEEN_COMPS
+
+  if [[ "${#COMPETITOR_LIST[@]}" -eq 0 ]]; then
+    echo ""
+    echo "  [skip] Stage 2 — no competitors to research (pass --competitors or check Stage 1 output)"
+    log_result 2 "Competitor Researcher" "SKIPPED (no competitors found)" "—" "—"
+    unset COMPETITOR_LIST
+  else
+
   COMP_TOTAL="${#COMPETITOR_LIST[@]}"
 
   hdr "Stage 2 of 6: Competitor Researcher  ($COMP_TOTAL in parallel)"
@@ -407,7 +453,10 @@ Follow your standard workflow exactly as specified in your agent instructions." 
   fi
 
   unset COMP_PIDS COMP_NAMES COMP_LOGS
-fi
+  unset COMPETITOR_LIST
+
+  fi  # end: competitors found
+fi    # end: stage not skipped
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
