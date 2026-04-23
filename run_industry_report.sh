@@ -28,6 +28,8 @@
 #                         4 = GTM Analyst
 #                         5 = Innovation Guru
 #                         6 = Consultant  (final synthesis)
+#   -m, --model         Claude model to use (default: claude-sonnet-4-6)
+#                       Examples: claude-opus-4-7, claude-haiku-4-5-20251001
 #   -h, --help          Show this help message
 #
 # Pipeline stages and outputs:
@@ -63,6 +65,7 @@ CONTEXT="Not provided — agents will research without client framing."
 COMPETITORS=""
 FOCUS=""
 START_FROM=1
+MODEL="claude-sonnet-4-6"
 
 # ── Argument parsing ──────────────────────────────────────────────────────────
 if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
@@ -88,6 +91,7 @@ while [[ $# -gt 0 ]]; do
     -d|--depth)        DEPTH="$2";       shift 2 ;;
     -f|--focus)        FOCUS="$2";       shift 2 ;;
     -s|--start-from)   START_FROM="$2";  shift 2 ;;
+    -m|--model)        MODEL="$2";       shift 2 ;;
     -h|--help)
       awk 'NR>1 && /^[^#]/{exit} NR>1{sub(/^# ?/, ""); print}' "$0"
       exit 0
@@ -232,6 +236,7 @@ run_stage() {
 
   if claude -p "$task" \
        --system-prompt-file "$agent_file" \
+       --model "$MODEL" \
        --allowedTools "Read,Write,WebSearch,Bash" \
        --max-turns "$turns" \
        --dangerously-skip-permissions; then
@@ -273,6 +278,7 @@ hdr "Research & Strategy — Full Pipeline Run"
 echo " Industry:    $INDUSTRY"
 echo " Company:     $COMPANY"
 echo " Depth:       $DEPTH"
+echo " Model:       $MODEL"
 echo " Competitors: ${COMPETITORS:-none}"
 if [[ -n "$FOCUS" ]]; then
   echo " Focus:       $FOCUS"
@@ -361,6 +367,7 @@ Write your outputs to:
 
 Follow your standard workflow exactly as specified in your agent instructions." \
       --system-prompt-file "$AGENT_03" \
+      --model "$MODEL" \
       --allowedTools "Read,Write,WebSearch,Bash" \
       --max-turns "$MAX_TURNS" \
       --dangerously-skip-permissions \
