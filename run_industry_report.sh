@@ -325,6 +325,14 @@ halt_if_failed() {
   sleep "$INTER_STAGE_SLEEP"
 }
 
+halt_if_failed_no_sleep() {
+  if [[ "$PIPELINE_FAILED" -eq 1 ]]; then
+    echo ""
+    echo "Pipeline halted — a stage wrote no output. Fix the issue and re-run with --start-from."
+    exit 1
+  fi
+}
+
 # ── Opening banner ────────────────────────────────────────────────────────────
 hdr "Research & Strategy — Full Pipeline Run"
 echo " Industry:         $INDUSTRY"
@@ -361,30 +369,79 @@ TURN BUDGET: You have approximately ${STAGE1_TURNS} turns. Manage them as follow
   one-line placeholders. Do NOT write key_competitors.txt yet — it must contain
   real names, not placeholders.
 - Turns 2 through $((STAGE1_TURNS - 3)): Research and fill in each section with real content.
-- Final 3 turns: First write key_competitors.txt with the real competitor names
-  you identified during research, then save your finalized report files.
-  You can write multiple files in a single turn by making multiple Write tool
-  calls in one response — do this to use your writing turns efficiently.
+- Final 3 turns: Save your finalized report files. A thinner but complete report
+  is better than a detailed but incomplete one. Do not start new research in your
+  final 3 turns. You can write multiple files in a single turn by making multiple
+  Write tool calls in one response — do this to use your writing turns efficiently.
 
 Write your outputs to:
 - ${OUT_DIR}/industry/market_research_report.md
 - ${OUT_DIR}/industry/market_data_table.csv
 - ${OUT_DIR}/industry/research_confidence_notes.md
-- ${OUT_DIR}/industry/key_competitors.txt  (write this LAST — real names only)
 
-key_competitors.txt must contain the 6–10 most significant competitors in this
-market, one company name per line, no bullets or punctuation — plain names only.
-Example format:
-  Toast
-  Square
-  SpotOn
-These will be used to automatically populate the competitor research stage.
+Make sure your market research report includes a clearly labelled section listing
+the major market players and competitors you identified — this will be used in a
+subsequent step to populate the competitor research stage.
 
 Follow your standard workflow exactly as specified in your agent instructions." \
 "$STAGE1_TURNS" \
 "${OUT_DIR}/industry/market_research_report.md"
 
-halt_if_failed
+halt_if_failed_no_sleep
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# STAGE 1.5 — Competitor Extraction  (reads market research report, writes key_competitors.txt)
+# Decoupled from Stage 1 so turn exhaustion there never blocks competitor discovery.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+if [[ "$START_FROM" -le 1 ]]; then
+  hdr "Stage 1.5: Competitor Extraction"
+  echo ""
+
+  MARKET_REPORT="${OUT_DIR}/industry/market_research_report.md"
+  COMPETITORS_FILE="${OUT_DIR}/industry/key_competitors.txt"
+
+  if [[ ! -f "$MARKET_REPORT" ]]; then
+    echo "  Warning: market_research_report.md not found — skipping extraction."
+    echo "  Stage 2 will use --competitors seeds only."
+  else
+    t_start_ext="$(date '+%Y-%m-%d %H:%M:%S')"
+
+    if claude -p \
+"Read the market research report at ${MARKET_REPORT} and extract all companies
+mentioned as major market players, key competitors, or significant vendors in the
+${INDUSTRY} industry.
+
+Write the 6–10 most significant company names to ${COMPETITORS_FILE}.
+Format: one company name per line, no bullets, no numbers, no punctuation — plain names only.
+Example:
+  Toast
+  Square
+  SpotOn
+
+Do not include the commissioning company (${COMPANY}) in the list.
+Do not add commentary or explanations — the file must contain only company names." \
+      --model "$MODEL" \
+      --allowedTools "Read,Write" \
+      --max-turns 3 \
+      --dangerously-skip-permissions; then
+
+      t_end_ext="$(date '+%Y-%m-%d %H:%M:%S')"
+      log_result "1.5" "Competitor Extraction" "SUCCESS" "$t_start_ext" "$t_end_ext"
+      COMP_COUNT="$(wc -l < "$COMPETITORS_FILE" | tr -d ' ')"
+      echo "  Extracted $COMP_COUNT competitors → $COMPETITORS_FILE"
+    else
+      t_end_ext="$(date '+%Y-%m-%d %H:%M:%S')"
+      log_result "1.5" "Competitor Extraction" "FAILED" "$t_start_ext" "$t_end_ext"
+      echo "  Warning: extraction failed — Stage 2 will use --competitors seeds only."
+    fi
+  fi
+
+  echo ""
+  echo "  Pausing ${INTER_STAGE_SLEEP}s before Stage 2..."
+  sleep "$INTER_STAGE_SLEEP"
+fi
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
