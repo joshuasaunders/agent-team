@@ -153,12 +153,14 @@ AGENT_06="$RS_DIR/06_innovation_guru.md"
 AGENT_07="$RS_DIR/07_consultant.md"
 
 if [[ "$DEPTH" == "quick" ]]; then
-  MAX_TURNS=10
-  CONSULTANT_TURNS=15
-else
   MAX_TURNS=15
-  CONSULTANT_TURNS=25
+  CONSULTANT_TURNS=20
+else
+  MAX_TURNS=20
+  CONSULTANT_TURNS=30
 fi
+
+INTER_STAGE_SLEEP=45  # seconds to pause between stages to avoid rate limits
 
 # ── Focus line helper ─────────────────────────────────────────────────────────
 if [[ -n "$FOCUS" ]]; then
@@ -316,6 +318,9 @@ halt_if_failed() {
     echo "Pipeline halted — a stage wrote no output. Fix the issue and re-run with --start-from."
     exit 1
   fi
+  echo ""
+  echo "  Pausing ${INTER_STAGE_SLEEP}s before next stage to avoid rate limits..."
+  sleep "$INTER_STAGE_SLEEP"
 }
 
 # ── Opening banner ────────────────────────────────────────────────────────────
