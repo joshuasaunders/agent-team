@@ -18,20 +18,29 @@
 #   -r, --competitors   Seed competitors to always include (comma-separated, optional)
 #                       Stage 1 will discover additional key competitors automatically.
 #                       Example: "Toast,Square" — these plus discovered ones are all profiled
-#   -d, --depth         Research depth: "quick" or "deep" (default: deep)
-#                         quick = top-line outputs, fewer turns per agent
-#                         deep  = full standard outputs, more turns per agent
+#   -n, --max-competitors  Maximum number of competitors to research (default: 5)
+#                       Seeds are prioritized; discovered companies fill remaining slots.
+#   -d, --depth         Research depth: "quick" or "deep" (default: quick)
+#                         quick = top-line outputs, 10 turns per agent
+#                         deep  = full standard outputs, 15 turns per agent
 #   -f, --focus         Specific focus areas to emphasize across all agents
 #   -s, --start-from    Resume from stage N (1–6). Skips all earlier stages.
 #                         1 = Industry Market Researcher
-#                         2 = Competitor Researcher  (one run per competitor)
+#                         2 = Competitor Researcher  (runs all competitors in parallel)
 #                         3 = Competitive Analyst
 #                         4 = GTM Analyst
 #                         5 = Innovation Guru
 #                         6 = Consultant  (final synthesis)
-#   -m, --model         Claude model to use (default: claude-sonnet-4-6)
-#                       Examples: claude-opus-4-7, claude-haiku-4-5-20251001
+#   -m, --model         Claude model to use (default: claude-haiku-4-5-20251001)
+#                       Examples: claude-sonnet-4-6, claude-opus-4-7
 #   -h, --help          Show this help message
+#
+# Turn limits by depth:
+#   quick → 10 turns per agent, 15 for Consultant
+#   deep  → 15 turns per agent, 25 for Consultant
+#
+# If an agent hits the turn limit but wrote partial output, the pipeline continues
+# with a warning rather than halting. Only a stage that writes nothing halts the run.
 #
 # Pipeline stages and outputs:
 #   Stage 1 → research-strategy/outputs/industry/     (market sizing, trends, dynamics)
@@ -44,29 +53,37 @@
 # Run log written to: runs/YYYY-MM-DD_<industry>/run_log.md
 #
 # Examples:
+#   # Fast test run — Haiku, 3 competitors, quick depth:
+#   ./run_industry_report.sh "restaurant technology" \
+#     --company "VIP" \
+#     --context "We sell POS and restaurant management software to restaurants." \
+#     --competitors "Toast,Square" \
+#     --max-competitors 3 \
+#     --depth quick
+#
+#   # Full production run — Sonnet, 5 competitors, deep depth:
 #   ./run_industry_report.sh "restaurant technology" \
 #     --company "VIP" \
 #     --context "We sell POS and restaurant management software to restaurants." \
 #     --competitors "Toast,Square,SpotOn" \
-#     --depth deep
+#     --depth deep \
+#     --model claude-sonnet-4-6
 #
 #   # Resume a partial run from Stage 4 (GTM Analyst):
 #   ./run_industry_report.sh "restaurant technology" \
-#     --company "VIP" \
-#     --context "We sell POS and restaurant management software to restaurants." \
-#     --competitors "Toast,Square,SpotOn" \
-#     --start-from 4
+#     --company "VIP" --context "..." --start-from 4
 
 set -uo pipefail
 
 # ── Defaults ──────────────────────────────────────────────────────────────────
-DEPTH="deep"
+DEPTH="quick"
 COMPANY="Not provided"
 CONTEXT="Not provided — agents will research without client framing."
 COMPETITORS=""
+MAX_COMPETITORS=5
 FOCUS=""
 START_FROM=1
-MODEL="claude-sonnet-4-6"
+MODEL="claude-haiku-4-5-20251001"
 
 # ── Argument parsing ──────────────────────────────────────────────────────────
 if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
@@ -86,13 +103,14 @@ shift
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    -c|--company)      COMPANY="$2";     shift 2 ;;
-    -x|--context)      CONTEXT="$2";     shift 2 ;;
-    -r|--competitors)  COMPETITORS="$2"; shift 2 ;;
-    -d|--depth)        DEPTH="$2";       shift 2 ;;
-    -f|--focus)        FOCUS="$2";       shift 2 ;;
-    -s|--start-from)   START_FROM="$2";  shift 2 ;;
-    -m|--model)        MODEL="$2";       shift 2 ;;
+    -c|--company)         COMPANY="$2";         shift 2 ;;
+    -x|--context)         CONTEXT="$2";         shift 2 ;;
+    -r|--competitors)     COMPETITORS="$2";     shift 2 ;;
+    -n|--max-competitors) MAX_COMPETITORS="$2"; shift 2 ;;
+    -d|--depth)           DEPTH="$2";           shift 2 ;;
+    -f|--focus)           FOCUS="$2";           shift 2 ;;
+    -s|--start-from)      START_FROM="$2";      shift 2 ;;
+    -m|--model)           MODEL="$2";           shift 2 ;;
     -h|--help)
       awk 'NR>1 && /^[^#]/{exit} NR>1{sub(/^# ?/, ""); print}' "$0"
       exit 0
@@ -109,6 +127,11 @@ fi
 
 if ! [[ "$START_FROM" =~ ^[1-6]$ ]]; then
   echo "Error: --start-from must be a number from 1 to 6."
+  exit 1
+fi
+
+if ! [[ "$MAX_COMPETITORS" =~ ^[0-9]+$ ]] || [[ "$MAX_COMPETITORS" -lt 1 ]]; then
+  echo "Error: --max-competitors must be a positive integer."
   exit 1
 fi
 
@@ -129,13 +152,12 @@ AGENT_05="$RS_DIR/05_gtm_analyst.md"
 AGENT_06="$RS_DIR/06_innovation_guru.md"
 AGENT_07="$RS_DIR/07_consultant.md"
 
-# Consultant gets extra turns because it reads the entire output corpus.
 if [[ "$DEPTH" == "quick" ]]; then
-  MAX_TURNS=15
-  CONSULTANT_TURNS=20
+  MAX_TURNS=10
+  CONSULTANT_TURNS=15
 else
-  MAX_TURNS=25
-  CONSULTANT_TURNS=35
+  MAX_TURNS=15
+  CONSULTANT_TURNS=25
 fi
 
 # ── Focus line helper ─────────────────────────────────────────────────────────
@@ -185,8 +207,10 @@ cat > "$RUN_LOG" <<EOF
 **Date:** $RUN_DATE
 **Started:** $RUN_START
 **Company:** $COMPANY
-**Depth:** $DEPTH
-**Competitors:** ${COMPETITORS:-none}
+**Model:** $MODEL
+**Depth:** $DEPTH  (max turns: $MAX_TURNS, consultant: $CONSULTANT_TURNS)
+**Max competitors:** $MAX_COMPETITORS
+**Seed competitors:** ${COMPETITORS:-none}
 **Focus:** ${FOCUS:-none}
 **Start from stage:** $START_FROM
 
@@ -197,8 +221,8 @@ cat > "$RUN_LOG" <<EOF
 EOF
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
-sep()  { echo "=========================================="; }
-hdr()  { echo ""; sep; echo " $1"; sep; }
+sep() { echo "=========================================="; }
+hdr() { echo ""; sep; echo " $1"; sep; }
 
 log_result() {
   local stage="$1" name="$2" status="$3" t_start="$4" t_end="$5"
@@ -211,18 +235,26 @@ log_result() {
 EOF
 }
 
-# ── State ─────────────────────────────────────────────────────────────────────
-PIPELINE_FAILED=0
+# ── Pipeline state ────────────────────────────────────────────────────────────
+PIPELINE_FAILED=0   # set when a stage writes nothing — halts the pipeline
+PIPELINE_WARNED=0   # set when a stage hit turn limit but wrote partial output — pipeline continues
 
 # ── Stage runner ──────────────────────────────────────────────────────────────
-# Skips the stage if its number is below START_FROM.
-# Sets PIPELINE_FAILED=1 and prints a resume hint on failure.
+# Args:
+#   $1  stage_num
+#   $2  stage_name
+#   $3  agent_file
+#   $4  task prompt
+#   $5  max turns (optional, defaults to MAX_TURNS)
+#   $6  primary output file to check on failure (optional)
+#       If set and the file exists after a failed run, treats as partial rather than failed.
 run_stage() {
   local stage_num="$1"
   local stage_name="$2"
   local agent_file="$3"
   local task="$4"
   local turns="${5:-$MAX_TURNS}"
+  local primary_output="${6:-}"
 
   if [[ "$stage_num" -lt "$START_FROM" ]]; then
     echo "  [skip] Stage $stage_num — $stage_name"
@@ -246,48 +278,61 @@ run_stage() {
     log_result "$stage_num" "$stage_name" "SUCCESS" "$t_start" "$t_end"
     echo ""
     echo "  Stage $stage_num complete: $stage_name"
-    return 0
+
   else
     local exit_code=$?
     t_end="$(date '+%Y-%m-%d %H:%M:%S')"
-    log_result "$stage_num" "$stage_name" "FAILED (exit $exit_code)" "$t_start" "$t_end"
-    echo ""
-    echo "  Error: Stage $stage_num failed (exit $exit_code)."
-    echo "  To resume from here:"
-    echo "    $0 \"$INDUSTRY\" \\"
-    echo "      --company \"$COMPANY\" \\"
-    echo "      --context \"$CONTEXT\" \\"
-    if [[ -n "$COMPETITORS" ]]; then
-      echo "      --competitors \"$COMPETITORS\" \\"
+
+    if [[ -n "$primary_output" && -f "$primary_output" ]]; then
+      # Partial output written (likely hit turn limit) — warn and continue
+      log_result "$stage_num" "$stage_name" \
+        "PARTIAL — hit turn limit, output may be incomplete" "$t_start" "$t_end"
+      echo ""
+      echo "  Warning: Stage $stage_num hit the turn limit but wrote partial output."
+      echo "  Continuing with available data. Review: $primary_output"
+      PIPELINE_WARNED=1
+    else
+      # Nothing written — real failure, halt
+      log_result "$stage_num" "$stage_name" \
+        "FAILED — no output written (exit $exit_code)" "$t_start" "$t_end"
+      echo ""
+      echo "  Error: Stage $stage_num failed — no output was written."
+      echo "  To resume from here:"
+      echo "    $0 \"$INDUSTRY\" \\"
+      echo "      --company \"$COMPANY\" \\"
+      echo "      --context \"$CONTEXT\" \\"
+      if [[ -n "$COMPETITORS" ]]; then
+        echo "      --competitors \"$COMPETITORS\" \\"
+      fi
+      echo "      --model $MODEL --depth $DEPTH --start-from $stage_num"
+      PIPELINE_FAILED=1
     fi
-    echo "      --depth $DEPTH --start-from $stage_num"
-    PIPELINE_FAILED=1
-    return "$exit_code"
   fi
 }
 
 halt_if_failed() {
   if [[ "$PIPELINE_FAILED" -eq 1 ]]; then
     echo ""
-    echo "Pipeline halted. Fix the issue and re-run with --start-from to resume."
+    echo "Pipeline halted — a stage wrote no output. Fix the issue and re-run with --start-from."
     exit 1
   fi
 }
 
 # ── Opening banner ────────────────────────────────────────────────────────────
 hdr "Research & Strategy — Full Pipeline Run"
-echo " Industry:    $INDUSTRY"
-echo " Company:     $COMPANY"
-echo " Depth:       $DEPTH"
-echo " Model:       $MODEL"
-echo " Competitors: ${COMPETITORS:-none}"
+echo " Industry:         $INDUSTRY"
+echo " Company:          $COMPANY"
+echo " Model:            $MODEL"
+echo " Depth:            $DEPTH  (${MAX_TURNS} turns/agent, ${CONSULTANT_TURNS} for Consultant)"
+echo " Max competitors:  $MAX_COMPETITORS"
+echo " Seed competitors: ${COMPETITORS:-none}"
 if [[ -n "$FOCUS" ]]; then
-  echo " Focus:       $FOCUS"
+  echo " Focus:            $FOCUS"
 fi
 if [[ "$START_FROM" -gt 1 ]]; then
-  echo " Resuming:    Stage $START_FROM"
+  echo " Resuming:         Stage $START_FROM"
 fi
-echo " Run log:     $RUN_LOG"
+echo " Run log:          $RUN_LOG"
 sep
 
 
@@ -317,7 +362,9 @@ Example format:
   SpotOn
 These will be used to automatically populate the competitor research stage.
 
-Follow your standard workflow exactly as specified in your agent instructions."
+Follow your standard workflow exactly as specified in your agent instructions." \
+"$MAX_TURNS" \
+"${OUT_DIR}/industry/market_research_report.md"
 
 halt_if_failed
 
@@ -333,11 +380,11 @@ if [[ "$START_FROM" -gt 2 ]]; then
   log_result 2 "Competitor Researcher" "SKIPPED (start-from $START_FROM)" "—" "—"
 
 else
-  # ── Build merged competitor list: Stage 1 discoveries + --competitors seeds ─
+  # ── Build merged competitor list: seed --competitors + Stage 1 discoveries ──
   declare -A SEEN_COMPS
   COMPETITOR_LIST=()
 
-  # Add seed competitors from --competitors flag first
+  # Seeds first — they're guaranteed slots
   if [[ -n "$COMPETITORS" ]]; then
     IFS=',' read -ra SEED_LIST <<< "$COMPETITORS"
     for SEED_RAW in "${SEED_LIST[@]}"; do
@@ -350,27 +397,35 @@ else
     done
   fi
 
-  # Merge in competitors discovered by the Industry Researcher
+  # Fill remaining slots with Stage 1 discoveries
   DISCOVERED_FILE="${OUT_DIR}/industry/key_competitors.txt"
   if [[ -f "$DISCOVERED_FILE" ]]; then
+    DISC_COUNT="$(wc -l < "$DISCOVERED_FILE" | tr -d ' ')"
     while IFS= read -r LINE || [[ -n "$LINE" ]]; do
-      DISC="$(echo "$LINE" | tr -d '[:space:]' | sed 's/^[-*•]*//')"
+      if [[ "${#COMPETITOR_LIST[@]}" -ge "$MAX_COMPETITORS" ]]; then break; fi
+      DISC="$(echo "$LINE" | sed 's/^[[:space:]]*[-*•]*//' | tr -d '[:space:]')"
       DISC_KEY="$(echo "$DISC" | tr '[:upper:]' '[:lower:]' | tr -cd '[:alnum:]')"
       if [[ -n "$DISC" && -z "${SEEN_COMPS[$DISC_KEY]:-}" ]]; then
         COMPETITOR_LIST+=("$DISC")
         SEEN_COMPS["$DISC_KEY"]=1
       fi
     done < "$DISCOVERED_FILE"
-    echo "  Discovered competitors: $(wc -l < "$DISCOVERED_FILE" | tr -d ' ') from Stage 1"
+    echo "  Stage 1 discovered $DISC_COUNT competitors; merged with seeds."
   else
-    echo "  Note: key_competitors.txt not found — using --competitors list only"
+    echo "  Note: key_competitors.txt not found — using --competitors seeds only."
   fi
 
   unset SEEN_COMPS
 
+  # Apply cap (seeds may already exceed it)
+  if [[ "${#COMPETITOR_LIST[@]}" -gt "$MAX_COMPETITORS" ]]; then
+    echo "  Capping to $MAX_COMPETITORS competitors."
+    COMPETITOR_LIST=("${COMPETITOR_LIST[@]:0:$MAX_COMPETITORS}")
+  fi
+
   if [[ "${#COMPETITOR_LIST[@]}" -eq 0 ]]; then
     echo ""
-    echo "  [skip] Stage 2 — no competitors to research (pass --competitors or check Stage 1 output)"
+    echo "  [skip] Stage 2 — no competitors found (pass --competitors or check Stage 1 output)"
     log_result 2 "Competitor Researcher" "SKIPPED (no competitors found)" "—" "—"
     unset COMPETITOR_LIST
   else
@@ -378,6 +433,7 @@ else
   COMP_TOTAL="${#COMPETITOR_LIST[@]}"
 
   hdr "Stage 2 of 6: Competitor Researcher  ($COMP_TOTAL in parallel)"
+  echo "  Competitors: ${COMPETITOR_LIST[*]}"
   echo "  Logs: $RUN_DIR/stage2_<competitor>.log"
   echo ""
 
@@ -388,11 +444,9 @@ else
   declare -A COMP_NAMES   # slug → display name
   declare -A COMP_LOGS    # slug → log file path
 
-  COMP_IDX=0
   for COMP_RAW in "${COMPETITOR_LIST[@]}"; do
     COMP="$(echo "$COMP_RAW" | tr -d '[:space:]')"
     COMP_SLUG="$(echo "$COMP" | tr '[:upper:]' '[:lower:]' | tr ' ' '_' | tr -cd '[:alnum:]_')"
-    COMP_IDX=$(( COMP_IDX + 1 ))
     COMP_LOG="$RUN_DIR/stage2_${COMP_SLUG}.log"
 
     COMP_NAMES["$COMP_SLUG"]="$COMP"
@@ -432,22 +486,32 @@ Follow your standard workflow exactly as specified in your agent instructions." 
   for COMP_SLUG in "${!COMP_PIDS[@]}"; do
     COMP="${COMP_NAMES[$COMP_SLUG]}"
     COMP_LOG="${COMP_LOGS[$COMP_SLUG]}"
+    COMP_PROFILE="${OUT_DIR}/competitors/${COMP_SLUG}_profile.md"
 
     if wait "${COMP_PIDS[$COMP_SLUG]}"; then
       log_result "2" "Competitor Researcher — $COMP" \
         "SUCCESS" "$STAGE2_START" "$(date '+%Y-%m-%d %H:%M:%S')"
-      echo "  OK:   $COMP"
-    else
+      echo "  OK:      $COMP"
+    elif [[ -f "$COMP_PROFILE" ]]; then
+      # Hit turn limit but wrote a partial profile — warn and continue
       log_result "2" "Competitor Researcher — $COMP" \
-        "FAILED  (see $COMP_LOG)" "$STAGE2_START" "$(date '+%Y-%m-%d %H:%M:%S')"
-      echo "  FAIL: $COMP  → $COMP_LOG"
+        "PARTIAL — hit turn limit, profile may be incomplete" "$STAGE2_START" "$(date '+%Y-%m-%d %H:%M:%S')"
+      echo "  PARTIAL: $COMP  (incomplete profile written — continuing)"
+      PIPELINE_WARNED=1
+    else
+      # No output at all — real failure
+      log_result "2" "Competitor Researcher — $COMP" \
+        "FAILED — no output written  (see $COMP_LOG)" "$STAGE2_START" "$(date '+%Y-%m-%d %H:%M:%S')"
+      echo "  FAIL:    $COMP  → $COMP_LOG"
       STAGE2_ANY_FAILED=1
     fi
   done
 
   echo ""
   if [[ "$STAGE2_ANY_FAILED" -eq 1 ]]; then
-    echo "  Warning: one or more competitor jobs failed. Check logs above before continuing."
+    echo "  Warning: one or more competitor profiles were not written. Check logs above."
+  elif [[ "$PIPELINE_WARNED" -eq 1 ]]; then
+    echo "  Stage 2 complete with warnings: some profiles may be partial."
   else
     echo "  Stage 2 complete: all $COMP_TOTAL competitor profiles written."
   fi
@@ -483,7 +547,9 @@ Write your outputs to:
 - ${OUT_DIR}/analysis/positioning_map_data.csv
 - ${OUT_DIR}/analysis/swot_[company_name].md  (one file per competitor profiled)
 
-Follow your standard workflow exactly as specified in your agent instructions."
+Follow your standard workflow exactly as specified in your agent instructions." \
+"$MAX_TURNS" \
+"${OUT_DIR}/analysis/competitive_analysis_report.md"
 
 halt_if_failed
 
@@ -513,7 +579,9 @@ Write your outputs to:
 - ${OUT_DIR}/gtm/messaging_framework.md
 - ${OUT_DIR}/gtm/gtm_recommendations_summary.md
 
-Follow your standard workflow exactly as specified in your agent instructions."
+Follow your standard workflow exactly as specified in your agent instructions." \
+"$MAX_TURNS" \
+"${OUT_DIR}/gtm/gtm_strategy_report.md"
 
 halt_if_failed
 
@@ -542,7 +610,9 @@ Write your outputs to:
 - ${OUT_DIR}/innovation/disruption_scenarios.md
 - ${OUT_DIR}/innovation/opportunity_priority_matrix.md
 
-Follow your standard workflow exactly as specified in your agent instructions."
+Follow your standard workflow exactly as specified in your agent instructions." \
+"$MAX_TURNS" \
+"${OUT_DIR}/innovation/innovation_opportunities.md"
 
 halt_if_failed
 
@@ -575,7 +645,8 @@ Write your outputs to:
 - ${OUT_DIR}/synthesis/assumptions_and_risks.md
 
 Follow your standard workflow exactly as specified in your agent instructions." \
-"$CONSULTANT_TURNS"
+"$CONSULTANT_TURNS" \
+"${OUT_DIR}/synthesis/executive_summary.md"
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -583,12 +654,17 @@ Follow your standard workflow exactly as specified in your agent instructions." 
 # ═══════════════════════════════════════════════════════════════════════════════
 RUN_END="$(date '+%Y-%m-%d %H:%M:%S')"
 
+FINAL_STATUS="SUCCESS"
+[[ "$PIPELINE_WARNED"  -eq 1 ]] && FINAL_STATUS="COMPLETED WITH WARNINGS"
+[[ "$PIPELINE_FAILED"  -eq 1 ]] && FINAL_STATUS="FAILED"
+
 cat >> "$RUN_LOG" <<EOF
 ---
 
 ## Run Complete
 
 **Ended:** $RUN_END
+**Final status:** $FINAL_STATUS
 
 ### Output locations
 - \`research-strategy/outputs/industry/\`
@@ -606,6 +682,7 @@ EOF
 
 hdr "Run Complete"
 echo " Industry: $INDUSTRY"
+echo " Status:   $FINAL_STATUS"
 echo " Ended:    $RUN_END"
 echo ""
 echo " Outputs:"
@@ -621,6 +698,9 @@ sep
 echo ""
 
 if [[ "$PIPELINE_FAILED" -eq 1 ]]; then
-  echo "Warning: One or more stages failed. Check the run log for details."
+  echo "One or more stages wrote no output. Check the run log for details."
   exit 1
+elif [[ "$PIPELINE_WARNED" -eq 1 ]]; then
+  echo "Pipeline completed with warnings — some stages hit the turn limit and may have partial output."
+  echo "Review flagged files before relying on downstream results."
 fi
