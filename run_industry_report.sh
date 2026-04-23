@@ -360,9 +360,11 @@ TURN BUDGET: You have approximately ${STAGE1_TURNS} turns. Manage them as follow
   market_data_table.csv, research_confidence_notes.md) with section headers and
   one-line placeholders. Do NOT write key_competitors.txt yet — it must contain
   real names, not placeholders.
-- Turns 2 through $((STAGE1_TURNS - 2)): Research and fill in each section with real content.
-- Final 2 turns: First write key_competitors.txt with the real competitor names
+- Turns 2 through $((STAGE1_TURNS - 3)): Research and fill in each section with real content.
+- Final 3 turns: First write key_competitors.txt with the real competitor names
   you identified during research, then save your finalized report files.
+  You can write multiple files in a single turn by making multiple Write tool
+  calls in one response — do this to use your writing turns efficiently.
 
 Write your outputs to:
 - ${OUT_DIR}/industry/market_research_report.md
@@ -480,6 +482,7 @@ TURN BUDGET: You have approximately ${MAX_TURNS} turns. Manage them as follows:
 - Turn 1: Write a skeleton profile immediately — section headers and one-line placeholders only. This ensures a file exists even if turns run out.
 - Turns 2 through $((MAX_TURNS - 2)): Research and fill in each section with real content.
 - Final 2 turns: Save your finalized output files. A thinner but complete profile is better than a detailed but incomplete one. Do not start new research in your final 2 turns.
+  You can write multiple files in a single turn by making multiple Write tool calls in one response — do this to use your writing turns efficiently.
 
 Write your outputs to:
 - ${OUT_DIR}/competitors/${COMP_SLUG}_profile.md
@@ -564,8 +567,12 @@ Read all available files in both directories before beginning your analysis.
 
 TURN BUDGET: You have approximately ${MAX_TURNS} turns. Manage them as follows:
 - Turn 1: Write skeleton output files immediately — section headers and one-line placeholders only.
-- Turns 2 through $((MAX_TURNS - 2)): Read inputs and fill in each section with real analysis.
-- Final 2 turns: Save your finalized output files. A thinner but complete analysis is better than a detailed but incomplete one. Do not start new reading in your final 2 turns.
+- Turns 2 through $((MAX_TURNS - 3)): Read inputs and fill in each section with real analysis.
+- Final 3 turns: Save your finalized output files. A thinner but complete analysis is better
+  than a detailed but incomplete one. Do not start new reading in your final 3 turns.
+  You can write multiple files in a single turn by making multiple Write tool calls in one
+  response — do this to use your writing turns efficiently. You have several files to write
+  (including one SWOT file per competitor) so batching is important here.
 
 Write your outputs to:
 - ${OUT_DIR}/analysis/competitive_analysis_report.md
@@ -601,8 +608,11 @@ Read all available files in those directories. Pay special attention to key_insi
 
 TURN BUDGET: You have approximately ${MAX_TURNS} turns. Manage them as follows:
 - Turn 1: Write skeleton output files immediately — section headers and one-line placeholders only.
-- Turns 2 through $((MAX_TURNS - 2)): Read inputs and fill in each section with real strategy.
-- Final 2 turns: Save your finalized output files. A thinner but complete strategy is better than a detailed but incomplete one. Do not start new reading in your final 2 turns.
+- Turns 2 through $((MAX_TURNS - 3)): Read inputs and fill in each section with real strategy.
+- Final 3 turns: Save your finalized output files. A thinner but complete strategy is better
+  than a detailed but incomplete one. Do not start new reading in your final 3 turns.
+  You can write multiple files in a single turn by making multiple Write tool calls in one
+  response — do this to use your writing turns efficiently.
 
 Write your outputs to:
 - ${OUT_DIR}/gtm/gtm_strategy_report.md
@@ -640,6 +650,7 @@ TURN BUDGET: You have approximately ${MAX_TURNS} turns. Manage them as follows:
 - Turn 1: Write skeleton output files immediately — section headers and one-line placeholders only.
 - Turns 2 through $((MAX_TURNS - 2)): Read inputs and fill in each section with real analysis.
 - Final 2 turns: Save your finalized output files. A thinner but complete report is better than a detailed but incomplete one. Do not start new reading in your final 2 turns.
+  You can write multiple files in a single turn by making multiple Write tool calls in one response — do this to use your writing turns efficiently.
 
 Write your outputs to:
 - ${OUT_DIR}/innovation/innovation_opportunities.md
@@ -669,8 +680,11 @@ ${FOCUS_LINE}
 
 TURN BUDGET: You have approximately ${CONSULTANT_TURNS} turns. Manage them as follows:
 - Turn 1: Write skeleton output files immediately — section headers and one-line placeholders only.
-- Turns 2 through $((CONSULTANT_TURNS - 2)): Read all inputs and fill in each section with real synthesis.
-- Final 2 turns: Save your finalized output files. A thinner but complete synthesis is better than a detailed but incomplete one. Do not start new reading in your final 2 turns.
+- Turns 2 through $((CONSULTANT_TURNS - 3)): Read all inputs and fill in each section with real synthesis.
+- Final 3 turns: Save your finalized output files. A thinner but complete synthesis is better
+  than a detailed but incomplete one. Do not start new reading in your final 3 turns.
+  You can write multiple files in a single turn by making multiple Write tool calls in one
+  response — do this to use your writing turns efficiently.
 
 Read ALL files from these directories before writing section content:
 - ${OUT_DIR}/industry/
