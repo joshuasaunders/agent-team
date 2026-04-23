@@ -162,7 +162,8 @@ else
   CONSULTANT_TURNS=30
 fi
 
-INTER_STAGE_SLEEP=45  # seconds to pause between stages to avoid rate limits
+INTER_STAGE_SLEEP=90      # seconds to pause between stages to avoid rate limits
+POST_STAGE2_SLEEP=120     # longer pause after Stage 2 — parallel jobs leave rate limit window hot
 
 # ── Focus line helper ─────────────────────────────────────────────────────────
 if [[ -n "$FOCUS" ]]; then
@@ -656,6 +657,11 @@ Follow your standard workflow exactly as specified in your agent instructions." 
   unset COMPETITOR_LIST
 
   fi  # end: competitors found
+
+  echo ""
+  echo "  Pausing ${POST_STAGE2_SLEEP}s after parallel Stage 2 to clear rate limit window..."
+  sleep "$POST_STAGE2_SLEEP"
+
 fi    # end: stage not skipped
 
 
