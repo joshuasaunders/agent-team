@@ -162,8 +162,9 @@ else
   CONSULTANT_TURNS=30
 fi
 
-INTER_STAGE_SLEEP=90      # seconds to pause between stages to avoid rate limits
-POST_STAGE2_SLEEP=120     # longer pause after Stage 2 — parallel jobs leave rate limit window hot
+INTER_STAGE_SLEEP=60      # seconds to pause between stages — matches the 1-minute rate limit window
+POST_STAGE2_SLEEP=60      # pause after Stage 2 (same — window resets every 60s)
+STAGE2_LAUNCH_STAGGER=30  # seconds between each parallel competitor job launch
 
 # ── Focus line helper ─────────────────────────────────────────────────────────
 if [[ -n "$FOCUS" ]]; then
@@ -575,10 +576,12 @@ else
   declare -A COMP_NAMES   # slug → display name
   declare -A COMP_LOGS    # slug → log file path
 
+  COMP_IDX=0
   for COMP_RAW in "${COMPETITOR_LIST[@]}"; do
     COMP="$(echo "$COMP_RAW" | tr -d '[:space:]')"
     COMP_SLUG="$(echo "$COMP" | tr '[:upper:]' '[:lower:]' | tr ' ' '_' | tr -cd '[:alnum:]_')"
     COMP_LOG="$RUN_DIR/stage2_${COMP_SLUG}.log"
+    COMP_IDX=$(( COMP_IDX + 1 ))
 
     COMP_NAMES["$COMP_SLUG"]="$COMP"
     COMP_LOGS["$COMP_SLUG"]="$COMP_LOG"
@@ -612,6 +615,12 @@ Follow your standard workflow exactly as specified in your agent instructions." 
 
     COMP_PIDS["$COMP_SLUG"]=$!
     echo "  Launched: $COMP  (PID ${COMP_PIDS[$COMP_SLUG]})"
+
+    # Stagger launches to avoid token burst at the start of Stage 2
+    if [[ "$COMP_IDX" -lt "$COMP_TOTAL" ]]; then
+      echo "  Waiting ${STAGE2_LAUNCH_STAGGER}s before next launch..."
+      sleep "$STAGE2_LAUNCH_STAGGER"
+    fi
   done
 
   echo ""
