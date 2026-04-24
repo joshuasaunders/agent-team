@@ -852,11 +852,11 @@ Read ALL files from these directories before writing section content:
 - ${OUT_DIR}/gtm/
 - ${OUT_DIR}/innovation/
 
-Write your outputs to:
-- ${OUT_DIR}/synthesis/strategic_synthesis_report.md
-- ${OUT_DIR}/synthesis/executive_summary.md
-- ${OUT_DIR}/synthesis/action_plan.md
-- ${OUT_DIR}/synthesis/assumptions_and_risks.md
+OUTPUT PRIORITY — complete these in order; if turns run short, finish earlier files before starting later ones:
+1. ${OUT_DIR}/synthesis/executive_summary.md        ← HIGHEST PRIORITY, complete this first
+2. ${OUT_DIR}/synthesis/action_plan.md
+3. ${OUT_DIR}/synthesis/assumptions_and_risks.md
+4. ${OUT_DIR}/synthesis/strategic_synthesis_report.md  ← complete last (longest document)
 
 Follow your standard workflow exactly as specified in your agent instructions." \
 "$CONSULTANT_TURNS" \
