@@ -1,5 +1,14 @@
 # Run outputs — these are artifacts, not source files
 research-strategy/outputs/
+executive/outputs/
+engineering/outputs/
+product/outputs/
+marketing/outputs/
+sales/outputs/
+finance/outputs/
+legal/outputs/
+people/outputs/
+it-corporate-ops/outputs/
 runs/
 
 # Python environments
@@ -14,11 +23,7 @@ __pycache__/
 Thumbs.db
 
 # Keep the output directory structure but not the contents
-!research-strategy/outputs/.gitkeep
-!research-strategy/outputs/industry/.gitkeep
-!research-strategy/outputs/competitors/.gitkeep
-!research-strategy/outputs/analysis/.gitkeep
-!research-strategy/outputs/gtm/.gitkeep
-!research-strategy/outputs/innovation/.gitkeep
-!research-strategy/outputs/synthesis/.gitkeep
+!**/outputs/
+!**/outputs/**/
+!**/outputs/**/.gitkeep
 !runs/.gitkeep

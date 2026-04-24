@@ -1,0 +1,57 @@
+Competitor,Price_Point_Low,Price_Point_High,Primary_Channel,Secondary_Channel,Technology_Maturity,Target_Market,Market_Share_2024,Customer_Satisfaction,Strategic_Positioning
+Jewelers Mutual,1.0,2.0,Direct/Agents,Jeweler Partnerships,Modernizing,HNW + Engagement Rings,28%,95% Claims Satisfaction,Specialty Incumbent + Domain Expert
+BriteCo,0.5,1.5,Jeweler Partnerships,Insurance Agents + Direct,Modern,Millennials + Watches,3-5%,4.7-4.9 stars,InsurTech Disruptor + Price Leader
+Zillion,1.0,2.0,Embedded Retail POS,White-label Partners,Modern,Point-of-Purchase Buyers,2-3%,4.9 stars,Frictionless Retail Specialist
+Lavalier,1.0,2.0,Signet + Progressive,White-label Retail,Outdated,Mid-Market + Affluent,1-2%,8.5/10 IGS,Retail Partnership + Fast Enroll
+GemShield,1.0,2.0,Direct Web,Preferred Jewelers,Legacy,Budget + Mass-Market,<1%,2.9/5 Trust,Affordable Veteran + Invisible
+Chubb,Variable,Variable,HNW Brokers,Umbrella Policies,Legacy,Ultra-HNW + Prestige,19%,Not Rated,Multi-line Carrier + Premium Positioning
+Travelers,1.0,2.5,Agents,Direct Web,Legacy,All Segments,5-8%,Not Rated,Traditional Carrier + Agent Network
+Liberty Mutual,1.0,2.5,Agents,Direct Web,Legacy,Bundled with Auto/Home,4-6%,Not Rated,Traditional Carrier + Bundling
+
+Market Positioning Notes:
+- Price Point: Annual premium as % of insured jewelry value (0% = zero deductible, 2% = standard rate)
+- Primary Channel: Main customer acquisition method (Direct Web, Agents, Jeweler Partnerships, Embedded Retail POS)
+- Technology Maturity: Legacy (pre-2015 tech), Modernizing (recent investment), Modern (cloud-based, API-driven), Digital-first (born digital)
+- Target Market: Primary customer segment (HNW = high-net-worth >$200K collections, Affluent >$50K items, Mid-Market $5K-$25K items, Mass-Market <$5K items)
+- Strategic Positioning: How each competitor positions vs. others in market
+
+Positioning Clusters:
+1. Specialty Incumbents: Jewelers Mutual, Chubb (domain expertise, coverage depth, brand trust)
+2. InsurTech Disruptors: BriteCo (modern UX, competitive pricing, technology platform)
+3. Retail Specialists: Zillion, Lavalier, GemShield (retail channel focus, embedded/partnership distribution)
+4. Traditional Multi-line: Travelers, Liberty Mutual (bundled offering, secondary focus on jewelry)
+
+Key Dimensions for Strategic Evaluation:
+- Dimension 1: Pricing (Low $0-0.75% vs. Medium $1-1.5% vs. High $1.5-2.5%)
+  Insight: BriteCo is price leader; most competitors converge on 1-2% standard rate
+
+- Dimension 2: Primary Customer Acquisition Channel
+  Direct-to-Consumer: BriteCo, Lavalier (web), GemShield (web)
+  Retail/Jeweler Partners: Jewelers Mutual, BriteCo (also), Zillion, Lavalier (also)
+  Embedded POS (1-click checkout): Zillion (unique)
+  Insurance Agents: Jewelers Mutual, Travelers, Liberty Mutual
+  HNW Brokers/Advisors: Chubb (exclusive)
+  Insight: No competitor is purely single-channel; multi-channel is norm (except pure specialists like Zillion)
+
+- Dimension 3: Technology Maturity vs. Customer Satisfaction
+  High Tech + High Satisfaction: BriteCo (4.7-4.9), Zillion (4.9)
+  Modern Tech + Good Satisfaction: Jewelers Mutual (modernizing, 95% claims satisfaction)
+  Outdated Tech + Mediocre Satisfaction: Lavalier (8.5/10), GemShield (2.9/5)
+  Legacy Tech + Assumed Low Satisfaction: Chubb (HNW only; limited reviews), Travelers, Liberty (bundled secondary offerings)
+  Insight: Technology maturity is strongly correlated with customer satisfaction; gap widens as market matures
+
+- Dimension 4: Market Share vs. Growth Rate
+  Jewelers Mutual: 28% share, declining to 23% by 2033 (stable but eroding)
+  Chubb: 19% share, declining to 14-15% by 2033 (stable but eroding)
+  BriteCo: 3-5% share, growing to 15% by 2033 (rapid growth)
+  Zillion: 2-3% share, growing to 5-7% by 2033 (rapid growth)
+  Legacy multi-line: 25-30% share, declining to 20% by 2033 (slow decline)
+  Insight: Market share is shifting from incumbents to specialists/InsurTech; consolidation around 5-6 major players by 2033
+
+Recommended Positioning Strategy for New Entrant:
+1. Choose one segment where differentiation is clear (e.g., "exceptional claims experience" or "sustainable jewelry focus")
+2. Build product/service superiority in that segment before attempting scale
+3. Secure retail partnerships or direct channel before competitors lock them up
+4. Invest in technology (mobile app, digital claims, customer portal) before it becomes table stakes
+5. Avoid head-to-head competition with Jewelers Mutual (incumbent moat) or Zillion (retail moat)
+6. Target underserved segments: mid-market jewelry (34% penetration), secondary/owned jewelry (unmapped), ethical/sustainable niche (emerging)
